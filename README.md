@@ -1,4 +1,4 @@
-# FCM release v1.4.17
+# FCM release v1.5.0
 # Federated Content Manager
 
 ## Development Workflow
@@ -23,7 +23,7 @@ Our development workflow follows these steps:
    - Version becomes release version (`x.y.z`)
    - Create PR from `staging` to `main`
 
-4. Version Alignement (hotfix)
+4. Version Alignements (hotfix)
    - Hotfixes triggers a retag on the FE repo
 
 ### Environment Variables
