@@ -1,4 +1,4 @@
-# FCM release v
+# FCM release v1.6.0
 # Federated Content Manager
 
 ## Development Workflow
@@ -111,6 +111,16 @@ npm run dev
 ```
 
 Open [http://localhost:3001](http://localhost:3001) with your browser to see the result.
+
+# Testing Version Management Workflow
+
+## Testing Version Bump
+
+### Deployment Guide
+
+This section describes the deployment process through our CI/CD pipeline.
+
+## Testing Feature 1 Workflow
 
 ## Deployment Process
 
