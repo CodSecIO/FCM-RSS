@@ -1,4 +1,4 @@
-# FCM release v1.6.0
+# FCM release v1.6.1
 # Federated Content Manager
 
 ## Development Workflow
