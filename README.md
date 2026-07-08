@@ -1,5 +1,13 @@
-# FCM release 1.6.2
+# FCM release 1.7.0
 # Federated Content Manager
+
+## Access control (RBAC)
+
+Role-based access control gates who can view and manage FCM resources (instances, feeds, rules, repositories, exclusions, etc.):
+
+- A built-in **Super Admin** role has full access.
+- Admins create custom roles with per-resource permissions and assign them to users under **Settings > Role Management**.
+- The **all-instances** group grants a role access to every instance.
 
 ## Development Workflow
 
@@ -52,6 +60,7 @@ Our development workflow follows these steps:
 | **CHECK_NEW_MSSP_INSTANCES**         | Boolean that determains if the user wants the FCM to check for new instances from the MSSP                                    | true                                              | Yes                                     |                                   |
 | **MAINTENANCE_TOKEN**                | Token to be used in maintenance routes                                                                                        | f4b9c2c6-6fc9-4770-9574-33ca87c5a72f              | Yes                                     |
 | **INTERVAL_UPDATE_FAILED_TASKS_MIN** | Time in min, that FCM will update failed taks for exceeded time                                                               | 3000                                              | Yes                                     |
+| **REPO_WHITELIST_URLS**              | Comma-separated whitelist of repository URLs allowed when adding a new repo. Unset = disabled; when set, only the listed URLs may be added (existing repos unaffected) | (unset)                        | Yes                                     |
 
 ### Running locally with development environment (optional)
 
