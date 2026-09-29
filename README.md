@@ -1,13 +1,5 @@
-# FCM release 1.7.0
+# FCM release 1.8.1
 # Federated Content Manager
-
-## Access control (RBAC)
-
-Role-based access control gates who can view and manage FCM resources (instances, feeds, rules, repositories, exclusions, etc.):
-
-- A built-in **Super Admin** role has full access.
-- Admins create custom roles with per-resource permissions and assign them to users under **Settings > Role Management**.
-- The **all-instances** group grants a role access to every instance.
 
 ## Development Workflow
 
@@ -57,10 +49,56 @@ Our development workflow follows these steps:
 | **BEARER_TOKEN_EXPIRE_TIME**         | Expiration time for logout                                                                                                    | 30m                                               | Yes                                     |
 | **JWT_REFRESH_SECRET**               | Expiration time for JWT secret                                                                                                | 2h                                                | Yes                                     |
 | **REFRESH_TOKEN_EXPIRE_TIME**        | Expiration time for logout                                                                                                    | 2h                                                | Yes                                     |
-| **CHECK_NEW_MSSP_INSTANCES**         | Boolean that determains if the user wants the FCM to check for new instances from the MSSP                                    | true                                              | Yes                                     |                                   |
+| **CHECK_NEW_MSSP_INSTANCES**         | Boolean that determains if the user wants the FCM to check for new instances from the MSSP                                    | true                                              | Yes                                     |
 | **MAINTENANCE_TOKEN**                | Token to be used in maintenance routes                                                                                        | f4b9c2c6-6fc9-4770-9574-33ca87c5a72f              | Yes                                     |
 | **INTERVAL_UPDATE_FAILED_TASKS_MIN** | Time in min, that FCM will update failed taks for exceeded time                                                               | 3000                                              | Yes                                     |
-| **REPO_WHITELIST_URLS**              | Comma-separated whitelist of repository URLs allowed when adding a new repo. Unset = disabled; when set, only the listed URLs may be added (existing repos unaffected) | (unset)                        | Yes                                     |
+| **PUBLISH_BATCH_SIZE**               | Items taken from the queue each publication cycle (a cycle is 7s). Formerly `MAX_TASKS_PER_CRON`, which is still accepted     | 50                                                | Yes                                     |
+| **PUBLISH_CONCURRENCY**              | Items published at the same time. Also the throttle protecting each SIEM                                                      | 10                                                | Yes                                     |
+| **PUBLISH_RETRY_ATTEMPTS**           | Attempts on a SIEM quota response (429) before the item is failed                                                              | 5                                                 | Yes                                     |
+| **PUBLISH_RETRY_BASE_MS**            | First backoff delay after a quota response; doubles each attempt                                                               | 1000                                              | Yes                                     |
+| **PUBLISH_TIMEOUT_HOURS**            | An item still unfinished after this long is marked failed                                                                      | 24                                                | Yes                                     |
+| **EMPTY_TASK_GRACE_MS**              | How long a task with no items yet is left alone before being completed                                                         | 600000                                            | Yes                                     |
+| **POSTGRES_POOL_MAX**                | Database connections this process may open. Must stay below the server's `max_connections`                                     | 50                                                | Yes                                     |
+| **POSTGRES_POOL_CONNECTION_TIMEOUT_MS** | How long a request waits for a database connection before failing with an error                                             | 10000                                             | Yes                                     |
+
+### Tuning publish throughput
+
+Publishing expands a selection into one item per content-per-instance, so 70
+rules across 140 instances is around 10,000 items. Two limits apply, and
+throughput is whichever is **lower** — raising one alone changes nothing:
+
+```
+selection:  PUBLISH_BATCH_SIZE / 7s          e.g. 50 / 7s  = 7.1 items/sec
+execution:  PUBLISH_CONCURRENCY / latency    e.g. 10 / 1.6s = 6.2 items/sec
+```
+
+Measure per-item latency from a completed task rather than guessing it; it
+depends on the SIEM, not on FCM:
+
+```sql
+select count(*) items,
+       round(extract(epoch from (max("updatedAt") - min("updatedAt")))) secs
+from publication_task_item where "publicationTaskId" = '<task id>';
+```
+
+Two things to keep in mind when raising `PUBLISH_CONCURRENCY`:
+
+- **Quota is per instance.** The same concurrency spread over 140 instances is
+  far gentler than aimed at one. A wide publish tolerates 20+; a publish to a
+  single instance, or one of curated rules (whose quota is tighter), wants ~5.
+- **Watch for quota failures** after any increase. A non-zero count means the
+  backoff could not absorb it, so reduce concurrency rather than raising
+  `PUBLISH_RETRY_ATTEMPTS`:
+
+```sql
+select count(*) from publication_task_item
+where status = 'Failed' and message ilike '%RESOURCE_EXHAUSTED%';
+```
+
+`POSTGRES_POOL_MAX` is **per process**. It must stay below the database's
+`max_connections` (default 100) minus a margin for tooling, divided by the
+number of service instances. A pool larger than the server allows fails
+mid-publish with `sorry, too many clients already`.
 
 ### Running locally with development environment (optional)
 
